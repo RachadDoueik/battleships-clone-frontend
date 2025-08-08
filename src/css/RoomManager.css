@@ -332,6 +332,66 @@
   color: rgba(255, 255, 255, 0.6);
 }
 
+/* Player Joined Notification */
+.player-joined-notification {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.joined-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  animation: celebrationBounce 1s ease-out;
+}
+
+@keyframes celebrationBounce {
+  0% { transform: scale(0.3) rotate(0deg); opacity: 0; }
+  50% { transform: scale(1.2) rotate(180deg); opacity: 1; }
+  100% { transform: scale(1) rotate(360deg); opacity: 1; }
+}
+
+.joined-message {
+  color: #4caf50;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.joined-message strong {
+  color: #4fc3f7;
+}
+
+.players-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.player-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+.player-label {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.player-name {
+  color: #4fc3f7;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
 /* Join Room Section */
 .join-room-form {
   text-align: left;

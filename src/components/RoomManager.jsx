@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { socket } from '../App';
 import '../css/RoomManager.css';
 
@@ -9,14 +9,74 @@ function RoomManager({ playerName, onBack }) {
   const [isJoiningRoom, setIsJoiningRoom] = useState(false);
   const [createdRoom, setCreatedRoom] = useState(null);
   const [error, setError] = useState('');
+  const [joinedPlayer, setJoinedPlayer] = useState(null);
+  const [success, setSuccess] = useState('');
 
   const generateRoomId = () => {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
   };
 
+  // Socket event listeners
+  useEffect(() => {
+    // Listen for player-joined event when someone joins your created room
+    socket.on('player-joined', (data) => {
+      console.log('Player joined room:', data);
+      setJoinedPlayer(data.player);
+      setSuccess(`${data.player.playerName} has joined your room!`);
+      
+      // Clear success message after 5 seconds
+      setTimeout(() => setSuccess(''), 5000);
+      
+      // You can add additional logic here like:
+      // - Play a notification sound
+      // - Navigate to game setup screen
+      // - Show player details
+    });
+
+    // Listen for room creation response
+    socket.on('room-created', (data) => {
+      setCreatedRoom(data);
+      setIsCreatingRoom(false);
+      console.log('Room created:', data);
+    });
+
+    socket.on('room-creation-error', (errorMsg) => {
+      setError(errorMsg);
+      setIsCreatingRoom(false);
+    });
+
+    // Listen for join response
+    socket.on('room-joined', (data) => {
+      console.log('Successfully joined room:', data);
+      setIsJoiningRoom(false);
+      setSuccess(`Successfully joined ${data.roomId}!`);
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(''), 3000);
+      
+      // Navigate to game or show game setup
+      // You can implement navigation logic here
+    });
+
+    socket.on('join-room-error', (errorMsg) => {
+      setError(errorMsg);
+      setIsJoiningRoom(false);
+    });
+
+    // Cleanup listeners on component unmount
+    return () => {
+      socket.off('player-joined');
+      socket.off('room-created');
+      socket.off('room-creation-error');
+      socket.off('room-joined');
+      socket.off('join-room-error');
+    };
+  }, []);
+
   const handleCreateRoom = () => {
     setIsCreatingRoom(true);
     setError('');
+    setSuccess('');
     
     const newRoomId = generateRoomId();
     
@@ -25,17 +85,6 @@ function RoomManager({ playerName, onBack }) {
       roomId: newRoomId,
       playerName: playerName,
       playerId: socket.id
-    });
-
-    // Listen for room creation response
-    socket.on('room-created', (data) => {
-      setCreatedRoom(data);
-      setIsCreatingRoom(false);
-    });
-
-    socket.on('room-creation-error', (errorMsg) => {
-      setError(errorMsg);
-      setIsCreatingRoom(false);
     });
   };
 
@@ -47,24 +96,13 @@ function RoomManager({ playerName, onBack }) {
 
     setIsJoiningRoom(true);
     setError('');
+    setSuccess('');
 
     // Emit socket event to join room
     socket.emit('join-room', {
       roomId: roomId.toUpperCase(),
       playerName: playerName,
       playerId: socket.id
-    });
-
-    // Listen for join response
-    socket.on('room-joined', (data) => {
-      console.log('Joined room:', data);
-      setIsJoiningRoom(false);
-      // Navigate to game (you'll implement this)
-    });
-
-    socket.on('join-room-error', (errorMsg) => {
-      setError(errorMsg);
-      setIsJoiningRoom(false);
     });
   };
 
@@ -107,6 +145,13 @@ function RoomManager({ playerName, onBack }) {
         <div className="error-message">
           <span className="error-icon">⚠️</span>
           {error}
+        </div>
+      )}
+
+      {success && (
+        <div className="success-message">
+          <span className="success-icon">✅</span>
+          {success}
         </div>
       )}
 
@@ -163,13 +208,37 @@ function RoomManager({ playerName, onBack }) {
                 </div>
                 
                 <div className="waiting-status">
-                  <div className="waiting-animation">
-                    <div className="waiting-dot"></div>
-                    <div className="waiting-dot"></div>
-                    <div className="waiting-dot"></div>
-                  </div>
-                  <p>Waiting for opponent to join...</p>
-                  <small>Share the room ID or link with your opponent</small>
+                  {!joinedPlayer ? (
+                    <>
+                      <div className="waiting-animation">
+                        <div className="waiting-dot"></div>
+                        <div className="waiting-dot"></div>
+                        <div className="waiting-dot"></div>
+                      </div>
+                      <p>Waiting for opponent to join...</p>
+                      <small>Share the room ID or link with your opponent</small>
+                    </>
+                  ) : (
+                    <>
+                      <div className="player-joined-notification">
+                        <div className="joined-icon">🎉</div>
+                        <p className="joined-message">
+                          <strong>{joinedPlayer.playerName}</strong> has joined the battle!
+                        </p>
+                        <small>Both players are ready. Starting game setup...</small>
+                      </div>
+                      <div className="players-list">
+                        <div className="player-info">
+                          <span className="player-label">Host:</span>
+                          <span className="player-name">{playerName}</span>
+                        </div>
+                        <div className="player-info">
+                          <span className="player-label">Opponent:</span>
+                          <span className="player-name">{joinedPlayer.playerName}</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
