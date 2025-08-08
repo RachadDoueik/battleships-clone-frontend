@@ -11,6 +11,7 @@ function RoomManager({ playerName, onBack }) {
   const [error, setError] = useState('');
   const [joinedPlayer, setJoinedPlayer] = useState(null);
   const [success, setSuccess] = useState('');
+  const [joinedRoomData, setJoinedRoomData] = useState(null); // For when this player joins a room
 
   const generateRoomId = () => {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -78,7 +79,8 @@ function RoomManager({ playerName, onBack }) {
     socket.on('room-joined', (data) => {
       console.log('Successfully joined room:', data);
       setIsJoiningRoom(false);
-      setSuccess(`Successfully joined ${data.roomId}!`);
+      setJoinedRoomData(data); // Store the joined room data
+      setSuccess(`Successfully joined room ${data.roomId || data.room?.id}!`);
       
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(''), 3000);
@@ -150,23 +152,6 @@ function RoomManager({ playerName, onBack }) {
 
   return (
     <div className="room-manager">
-      {/* Debug info - remove in production */}
-      <div style={{
-        position: 'fixed',
-        top: '10px',
-        left: '10px',
-        background: 'rgba(0,0,0,0.8)',
-        color: 'white',
-        padding: '10px',
-        borderRadius: '5px',
-        fontSize: '12px',
-        zIndex: 1000
-      }}>
-        <div>joinedPlayer: {joinedPlayer ? `${joinedPlayer.playerName || 'Unknown'} (${joinedPlayer.playerId || 'No ID'})` : 'null'}</div>
-        <div>createdRoom: {createdRoom ? createdRoom.roomId : 'null'}</div>
-        <div>success: {success || 'none'}</div>
-      </div>
-
       <div className="room-header">
         <h2>Multiplayer Battle</h2>
         <p>Create a room or join an existing battle</p>
@@ -254,7 +239,6 @@ function RoomManager({ playerName, onBack }) {
                 </div>
                 
                 <div className="waiting-status">
-                  {console.log('🔍 Rendering waiting status - joinedPlayer:', joinedPlayer)}
                   {!joinedPlayer ? (
                     <>
                       <div className="waiting-animation">
@@ -295,52 +279,101 @@ function RoomManager({ playerName, onBack }) {
 
       {activeTab === 'join' && (
         <div className="join-room-section">
-          <div className="join-room-content">
-            <div className="join-room-info">
-              <div className="info-icon">🎯</div>
-              <h3>Join a Battle Room</h3>
-              <p>Enter the room ID provided by your opponent to join their naval battle.</p>
-            </div>
-            
-            <div className="join-room-form">
-              <div className="input-group">
-                <input
-                  type="text"
-                  placeholder="Enter Room ID (e.g. ABC123)"
-                  value={roomId}
-                  onChange={(e) => setRoomId(e.target.value.toUpperCase())}
-                  className="room-id-input"
-                  maxLength={6}
-                />
-                <button 
-                  className="join-room-button"
-                  onClick={handleJoinRoom}
-                  disabled={!roomId.trim() || isJoiningRoom}
-                >
-                  {isJoiningRoom ? (
-                    <>
-                      <div className="button-spinner"></div>
-                      Joining...
-                    </>
-                  ) : (
-                    <>
-                      <span className="button-icon">🚢</span>
-                      Join Battle
-                    </>
-                  )}
-                </button>
+          {!joinedRoomData ? (
+            <div className="join-room-content">
+              <div className="join-room-info">
+                <div className="info-icon">🎯</div>
+                <h3>Join a Battle Room</h3>
+                <p>Enter the room ID provided by your opponent to join their naval battle.</p>
               </div>
               
-              <div className="join-tips">
-                <h4>Tips:</h4>
-                <ul>
-                  <li>Room IDs are 6 characters long (e.g., ABC123)</li>
-                  <li>Case doesn't matter</li>
-                  <li>Ask your opponent for their room ID</li>
-                </ul>
+              <div className="join-room-form">
+                <div className="input-group">
+                  <input
+                    type="text"
+                    placeholder="Enter Room ID (e.g. ABC123)"
+                    value={roomId}
+                    onChange={(e) => setRoomId(e.target.value.toUpperCase())}
+                    className="room-id-input"
+                    maxLength={6}
+                  />
+                  <button 
+                    className="join-room-button"
+                    onClick={handleJoinRoom}
+                    disabled={!roomId.trim() || isJoiningRoom}
+                  >
+                    {isJoiningRoom ? (
+                      <>
+                        <div className="button-spinner"></div>
+                        Joining...
+                      </>
+                    ) : (
+                      <>
+                        <span className="button-icon">🚢</span>
+                        Join Battle
+                      </>
+                    )}
+                  </button>
+                </div>
+                
+                <div className="join-tips">
+                  <h4>Tips:</h4>
+                  <ul>
+                    <li>Room IDs are 6 characters long (e.g., ABC123)</li>
+                    <li>Case doesn't matter</li>
+                    <li>Ask your opponent for their room ID</li>
+                  </ul>
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="room-joined-content">
+              <div className="success-message">
+                <span className="success-icon">✅</span>
+                Successfully Joined Room!
+              </div>
+              
+              <div className="room-details">
+                <h3>Battle Room: {joinedRoomData.roomId || joinedRoomData.room?.id}</h3>
+                <div className="room-id-display">
+                  <span className="room-id-label">Room ID:</span>
+                  <span className="room-id-value">{joinedRoomData.roomId || joinedRoomData.room?.id}</span>
+                </div>
+                
+                <div className="players-status">
+                  <h4>Players in Room:</h4>
+                  <div className="players-list">
+                    {joinedRoomData.room?.players?.map((player, index) => (
+                      <div key={index} className="player-info">
+                        <span className="player-label">
+                          {player.isHost ? 'Host:' : 'Player:'}
+                        </span>
+                        <span className="player-name">
+                          {player.name || player.playerName}
+                          {player.socketId === socket.id ? ' (You)' : ''}
+                        </span>
+                      </div>
+                    )) || (
+                      <div className="player-info">
+                        <span className="player-label">You:</span>
+                        <span className="player-name">{playerName}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="waiting-status">
+                  <div className="waiting-animation">
+                    <div className="waiting-dot"></div>
+                    <div className="waiting-dot"></div>
+                    <div className="waiting-dot"></div>
+                  </div>
+                  <p>Connected to room! Waiting for game to start...</p>
+                  <small>The host will start the game when ready</small>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

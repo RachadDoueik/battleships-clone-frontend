@@ -123,7 +123,8 @@
 }
 
 .create-room-content,
-.join-room-content {
+.join-room-content,
+.room-joined-content {
   text-align: center;
 }
 
@@ -390,6 +391,19 @@
   color: #4fc3f7;
   font-weight: 600;
   font-size: 1rem;
+}
+
+/* Players Status Section */
+.players-status {
+  margin: 2rem 0;
+  text-align: left;
+}
+
+.players-status h4 {
+  color: white;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  text-align: center;
 }
 
 /* Join Room Section */
