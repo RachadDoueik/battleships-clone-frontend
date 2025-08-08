@@ -20,17 +20,46 @@ function RoomManager({ playerName, onBack }) {
   useEffect(() => {
     // Listen for player-joined event when someone joins your created room
     socket.on('player-joined', (data) => {
-      console.log('Player joined room:', data);
-      setJoinedPlayer(data.player);
-      setSuccess(`${data.player.playerName} has joined your room!`);
+      console.log('🎉 Player joined room - Full data:', data);
+      
+      // Handle different possible data structures from backend
+      let joiningPlayer = null;
+      
+      if (data.player) {
+        // If backend sends { player: { name, id, etc } }
+        joiningPlayer = data.player;
+      } else if (data.room && data.room.players && data.room.players.length >= 2) {
+        // If backend sends { room: { players: [...] } }
+        // Find the player who is not the host (most recent joiner)
+        joiningPlayer = data.room.players.find(p => !p.isHost);
+      } else if (data.name || data.playerName) {
+        // If backend sends player data directly
+        joiningPlayer = {
+          playerName: data.name || data.playerName,
+          playerId: data.id || data.playerId || data.socketId
+        };
+      }
+      
+      console.log('🎉 Processed joining player:', joiningPlayer);
+      
+      if (joiningPlayer) {
+        // Ensure we have the right property name
+        const playerData = {
+          playerName: joiningPlayer.playerName || joiningPlayer.name,
+          playerId: joiningPlayer.playerId || joiningPlayer.id || joiningPlayer.socketId
+        };
+        
+        setJoinedPlayer(playerData);
+        setSuccess(`${playerData.playerName} has joined your room!`);
+        console.log('✅ joinedPlayer state set:', playerData);
+      } else {
+        console.error('❌ Could not extract player data from joined event:', data);
+        // Set a fallback if we can't parse the data properly
+        setSuccess('A player has joined your room!');
+      }
       
       // Clear success message after 5 seconds
       setTimeout(() => setSuccess(''), 5000);
-      
-      // You can add additional logic here like:
-      // - Play a notification sound
-      // - Navigate to game setup screen
-      // - Show player details
     });
 
     // Listen for room creation response
@@ -121,6 +150,23 @@ function RoomManager({ playerName, onBack }) {
 
   return (
     <div className="room-manager">
+      {/* Debug info - remove in production */}
+      <div style={{
+        position: 'fixed',
+        top: '10px',
+        left: '10px',
+        background: 'rgba(0,0,0,0.8)',
+        color: 'white',
+        padding: '10px',
+        borderRadius: '5px',
+        fontSize: '12px',
+        zIndex: 1000
+      }}>
+        <div>joinedPlayer: {joinedPlayer ? `${joinedPlayer.playerName || 'Unknown'} (${joinedPlayer.playerId || 'No ID'})` : 'null'}</div>
+        <div>createdRoom: {createdRoom ? createdRoom.roomId : 'null'}</div>
+        <div>success: {success || 'none'}</div>
+      </div>
+
       <div className="room-header">
         <h2>Multiplayer Battle</h2>
         <p>Create a room or join an existing battle</p>
@@ -208,6 +254,7 @@ function RoomManager({ playerName, onBack }) {
                 </div>
                 
                 <div className="waiting-status">
+                  {console.log('🔍 Rendering waiting status - joinedPlayer:', joinedPlayer)}
                   {!joinedPlayer ? (
                     <>
                       <div className="waiting-animation">
@@ -223,7 +270,7 @@ function RoomManager({ playerName, onBack }) {
                       <div className="player-joined-notification">
                         <div className="joined-icon">🎉</div>
                         <p className="joined-message">
-                          <strong>{joinedPlayer.playerName}</strong> has joined the battle!
+                          <strong>{joinedPlayer?.playerName || 'Unknown Player'}</strong> has joined the battle!
                         </p>
                         <small>Both players are ready. Starting game setup...</small>
                       </div>
@@ -234,7 +281,7 @@ function RoomManager({ playerName, onBack }) {
                         </div>
                         <div className="player-info">
                           <span className="player-label">Opponent:</span>
-                          <span className="player-name">{joinedPlayer.playerName}</span>
+                          <span className="player-name">{joinedPlayer?.playerName || 'Unknown Player'}</span>
                         </div>
                       </div>
                     </>
